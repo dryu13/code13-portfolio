@@ -19,14 +19,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error.' });
   }
 
+  // HTML parse_mode — only <, >, & need escaping (much safer than MarkdownV2)
   const text = [
-    `📬 *New message from code13.pro*`,
+    `📬 <b>New message from code13.pro</b>`,
     ``,
-    `👤 *Name:* ${escapeMarkdown(name)}`,
-    `📧 *Email:* ${escapeMarkdown(email)}`,
+    `👤 <b>Name:</b> ${escapeHtml(name)}`,
+    `📧 <b>Email:</b> ${escapeHtml(email)}`,
     ``,
-    `💬 *Message:*`,
-    escapeMarkdown(message),
+    `💬 <b>Message:</b>`,
+    escapeHtml(message),
   ].join('\n');
 
   try {
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           chat_id: chatId,
           text,
-          parse_mode: 'MarkdownV2',
+          parse_mode: 'HTML',
         }),
       }
     );
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!data.ok) {
-      console.error('Telegram API error:', data);
+      console.error('Telegram API error:', JSON.stringify(data));
       return res.status(502).json({ error: 'Failed to send message. Please try again.' });
     }
 
@@ -57,7 +58,10 @@ export default async function handler(req, res) {
   }
 }
 
-// Escape special chars for MarkdownV2
-function escapeMarkdown(text) {
-  return String(text).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+// Escape HTML special chars — the only ones Telegram HTML mode cares about
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
