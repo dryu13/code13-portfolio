@@ -478,6 +478,13 @@ nav {
   font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.06em;
   color: var(--muted); text-align: center; padding: 2rem 0;
 }
+.cf-error-msg {
+  font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  color: var(--pink); margin-top: 0.75rem; text-align: center;
+}
+.cf-submit:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
 
 /* ─── FOOTER ─── */
 footer {
@@ -808,6 +815,9 @@ footer {
       <div id="cf-success" style="display:none;">
         <p class="cf-success-msg">Thank you! I'll get back to you soon.</p>
       </div>
+      <div id="cf-error" style="display:none;">
+        <p class="cf-error-msg" id="cf-error-text"></p>
+      </div>
     </div>
   </div>
 </section>
@@ -861,10 +871,45 @@ const obs = new IntersectionObserver(entries => {
 document.querySelectorAll('.fi').forEach(el => obs.observe(el));
 
 // ─── CONTACT FORM ───
-function handleSubmit(e) {
+async function handleSubmit(e) {
   e.preventDefault();
-  document.getElementById('contact-form').style.display = 'none';
-  document.getElementById('cf-success').style.display = 'block';
+
+  const btn = e.target.querySelector('.cf-submit');
+  const errorEl = document.getElementById('cf-error');
+  const errorText = document.getElementById('cf-error-text');
+
+  // Reset error, disable button
+  errorEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'sending…';
+
+  const body = {
+    name:    document.getElementById('cf-name').value.trim(),
+    email:   document.getElementById('cf-email').value.trim(),
+    message: document.getElementById('cf-msg').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+      document.getElementById('contact-form').style.display = 'none';
+      document.getElementById('cf-success').style.display = 'block';
+    } else {
+      throw new Error(data.error || 'Something went wrong. Please try again.');
+    }
+  } catch (err) {
+    errorText.textContent = err.message;
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'send message';
+  }
 }
 </script>
 
